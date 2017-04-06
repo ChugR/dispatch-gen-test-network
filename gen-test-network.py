@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 #
 # Program to emit configs and scripts to effect:
 # - Create a test network of routers
@@ -29,8 +30,36 @@ class ExitStatus(Exception):
 def main_except(argv):
     #pdb.set_trace()
     """Given a pdml file name, send the javascript web page to stdout"""
-    if len(sys.argv) < 1:
-        sys.exit('Usage: %s n-routers' % sys.argv[0])
+    if len(argv) < 2:
+        es = ExitStatus('Usage: %s n-routers' % sys.argv[0])
+        raise es
+
+    # How many routers to configure?
+    nRouters = int(argv[1])
+
+    # Routers listeners all "look left" for incoming connections.
+    # The first, A, opens port 5672 for senders to fill
+    # The second, B, opens port 21000 for A's interrouter connection
+    # The third, C, opens port 21001 for B's interrouter connection
+    # ...
+    # The last, N, opens port 2100x for the interrouter connection and 55672 for the receivers to drain
+    #
+    # It's really convenient if all these ports are available when the scripts are started up, for sure.
+    #
+    inListenPort = 5672
+    outListenPort = 55672
+    firstInterrouter = 21000
+
+    # Where to put the generated files?
+    odir = os.path.join(
+        os.getcwd(),
+        datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
+    try:
+        os.makedirs(odir)
+    except OSError as e:
+        raise  # exit on any error
+    with open(os.path.join(mydir, filename), 'w') as d:
+        d.writelines(list)
 
 
 def main(argv):
