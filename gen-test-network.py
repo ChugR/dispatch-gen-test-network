@@ -85,7 +85,7 @@ def main_except(argv):
             if ri == 0:
                 # First router gets native listener and addresses
                 d.write("listener {\n")
-                d.write("    host: 0.0.0.0\n")
+                d.write("    host: 127.0.0.1\n")
                 d.write("    port: %s\n" % str(inListenPort))
                 d.write("    authenticatePeer: no\n")
                 d.write("}\n")
@@ -98,7 +98,7 @@ def main_except(argv):
             if ri > 0:
                 # IR Listener looks left
                 d.write("listener {\n")
-                d.write("    host: 0.0.0.0\n")
+                d.write("    host: 127.0.0.1\n")
                 d.write("    port: %s\n" % str(firstInterrouter + ri - 1))
                 d.write("    authenticatePeer: no\n")
                 d.write("    role: inter-router\n")
@@ -116,7 +116,7 @@ def main_except(argv):
             if ri == nRouters - 1:
                 # Last router gets native listener
                 d.write("listener {\n")
-                d.write("    host: 0.0.0.0\n")
+                d.write("    host: 127.0.0.1\n")
                 d.write("    port: %s\n" % str(outListenPort))
                 d.write("    authenticatePeer: no\n")
                 d.write("}\n")
@@ -160,7 +160,7 @@ def main_except(argv):
         d.write("# Environment for python/proton/n/stuff\n")
         d.write("source ~/bin/dispatch-setup.sh\n")
         d.write("\n")
-        d.write("/home/chug/git/qpid-proton/build/examples/cpp/simple_send -a amqp://localhost:%s/%s $1\n" % (str(inListenPort), targetQueue))
+        d.write("/home/chug/git/qpid-proton/build/examples/cpp/simple_send -a amqp://127.0.0.1:%s/%s $1\n" % (str(inListenPort), targetQueue))
 
 
     # Emit a receiver script
@@ -171,7 +171,7 @@ def main_except(argv):
         d.write("# Environment for python/proton/n/stuff\n")
         d.write("source ~/bin/dispatch-setup.sh\n")
         d.write("\n")
-        d.write("/home/chug/git/qpid-proton/build/examples/cpp/simple_recv -a amqp://localhost:%s/%s $1\n" % (str(outListenPort), targetQueue))
+        d.write("/home/chug/git/qpid-proton/build/examples/cpp/simple_recv -a amqp://127.0.0.1:%s/%s $1\n" % (str(outListenPort), targetQueue))
 
     # Make the scripts executable
     chmodExec(pathqdr)
