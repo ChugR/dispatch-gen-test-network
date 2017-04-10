@@ -27,6 +27,7 @@ class ExitStatus(Exception):
     def __init__(self, status): self.status = status
 
 def chmodExec(path):
+    """Make some file executable as in 'chmod -x path' """
     st = os.stat(path)
     os.chmod(path, st.st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
 
@@ -51,13 +52,26 @@ def main_except(argv):
     # ...
     # The last, N, opens port 2100x for the interrouter connection and 55672 for the receivers to drain
     #
-    #       0 A            1 B
-    #       +------+       +-------+
-    #    L: 5672         L: 21000
-    #           C: 21000        C: 21001
+    #       0 A            1 B            ---   3 D
+    #       +------+       +-------+            +-------+
+    #    L: 5672         L: 21000            L:  21002
+    #           C: 21000        C: 21001             L: 55672
     #         addrs
+    #
     # It's really convenient if all these ports are available when the scripts are started up, for sure.
     #
+
+    #
+    # ./run-qdr
+    # perf record --pid=NNNN -g
+    # ./receiver "-m 1000000"
+    # ./sender   "-m 1000000"
+    # perf ^C
+    # perf report --call-graph --stdio > x.txt
+    # emacs x.txt  search for core_thread and buffer_clone
+    #
+
+    # Constants chosen arbitrarily
     inListenPort = 5672
     outListenPort = 55672
     firstInterrouter = 21000
@@ -76,7 +90,7 @@ def main_except(argv):
         rid = chr(ord('A') + ri)
         filename = "%c.conf" % rid
         with open(os.path.join(odir, filename), 'w') as d:
-            d.write("# Generated file\n")
+            d.write("# Generated file (gen-test-network.py)\n")
             d.write("router {\n")
             d.write("    mode: interior\n")
             d.write("    id: Router.%s\n" % rid)
@@ -92,7 +106,7 @@ def main_except(argv):
                 d.write("\n")
                 d.write("address {\n")
                 d.write("    prefix: %s\n" % targetQueue)
-                d.write("    distribution: closest\n")
+                d.write("    distribution: multicast\n")
                 d.write("}\n")
                 d.write("\n")
             if ri > 0:
@@ -151,6 +165,11 @@ def main_except(argv):
 
         # shutdown hint
         d.write("echo  to shut down routers execute: kill %s\n" % " ".join(pids))
+        d.write("echo To get perf data for router:\n")
+        for ri in range(0, nRouters):
+            rid = chr(ord('A') + ri)
+            d.write("echo                          %c: perf record --pid=%s -g --output=%c_perf.data\n" % (rid, pids[ri], rid))
+        d.write("echo To analyze a perf data file: perf report -g --call-graph --stdio > File-perf-graph.txt\n")
 
     # Emit a sender script
     pathsndr = os.path.join(odir, "sender.sh")
