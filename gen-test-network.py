@@ -73,7 +73,7 @@ def main_except(argv):
 
     # Constants chosen arbitrarily
     inListenPort = 5672
-    outListenPort = 55672
+    outListenPort = 5674
     firstInterrouter = 21000
     targetQueue = "q1"
 
@@ -106,6 +106,7 @@ def main_except(argv):
                 d.write("\n")
                 d.write("address {\n")
                 d.write("    prefix: %s\n" % targetQueue)
+                # d.write("    distribution: closest\n")
                 d.write("    distribution: multicast\n")
                 d.write("}\n")
                 d.write("\n")
@@ -168,8 +169,11 @@ def main_except(argv):
         d.write("echo To get perf data for router:\n")
         for ri in range(0, nRouters):
             rid = chr(ord('A') + ri)
-            d.write("echo                          %c: perf record --pid=%s -g --output=%c_perf.data\n" % (rid, pids[ri], rid))
-        d.write("echo To analyze a perf data file: perf report -g --call-graph --stdio > File-perf-graph.txt\n")
+            d.write("echo . %c: perf record --pid=%s -g --output=%c_perf.data\n" % (rid, pids[ri], rid))
+        d.write("echo To analyze a perf data file:\n")
+        for ri in range(0, nRouters):
+            rid = chr(ord('A') + ri)
+            d.write("echo . %c: perf report -g --call-graph --stdio -i %c_perf.data --header '>' %c-perf-graph.txt\n" % (rid, rid, rid))
 
     # Emit a sender script
     pathsndr = os.path.join(odir, "sender.sh")
