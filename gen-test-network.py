@@ -75,7 +75,7 @@ def main_except(argv):
     inListenPort = 5672
     outListenPort = 5674
     firstInterrouter = 21000
-    targetQueue = "q1"
+    targetQueue = "q1"  # addresses are: q1-balanced, q1-closest, q1-multicast
 
     # Q: Where to put the generated files? A: odir
     od = "%s_%d" % (datetime.now().strftime('%Y-%m-%d_%H-%M-%S'), nRouters)
@@ -102,14 +102,15 @@ def main_except(argv):
                 d.write("    host: 127.0.0.1\n")
                 d.write("    port: %s\n" % str(inListenPort))
                 d.write("    authenticatePeer: no\n")
+                d.write("    saslMechanisms: ANONYMOUS\n")
                 d.write("}\n")
                 d.write("\n")
-                d.write("address {\n")
-                d.write("    prefix: %s\n" % targetQueue)
-                # d.write("    distribution: closest\n")
-                d.write("    distribution: multicast\n")
-                d.write("}\n")
-                d.write("\n")
+                for dmode in ["balanced", "closest", "multicast"]:
+                    d.write("address {\n")
+                    d.write("    prefix: %s-%s\n" % (targetQueue, dmode))
+                    d.write("    distribution: %s\n" % (dmode))
+                    d.write("}\n")
+                    d.write("\n")
             if ri > 0:
                 # IR Listener looks left
                 d.write("listener {\n")
@@ -134,6 +135,7 @@ def main_except(argv):
                 d.write("    host: 127.0.0.1\n")
                 d.write("    port: %s\n" % str(outListenPort))
                 d.write("    authenticatePeer: no\n")
+                d.write("    saslMechanisms: ANONYMOUS\n")
                 d.write("}\n")
             # all routers get logging
             lfn = "%s.log" % rid
@@ -174,32 +176,31 @@ def main_except(argv):
         for ri in range(0, nRouters):
             rid = chr(ord('A') + ri)
             d.write("echo . %c: perf report -g --call-graph --stdio -i %c_perf.data --header '>' %c-perf-graph.txt\n" % (rid, rid, rid))
+    chmodExec(pathqdr)
 
-    # Emit a sender script
-    pathsndr = os.path.join(odir, "sender.sh")
-    with open(pathsndr, 'w') as d:
-        d.write("#!/bin/bash\n")
-        d.write("\n")
-        d.write("# Environment for python/proton/n/stuff\n")
-        d.write("source ~/bin/dispatch-setup.sh\n")
-        d.write("\n")
-        d.write("/home/chug/git/qpid-proton/build/examples/cpp/simple_send -a amqp://127.0.0.1:%s/%s $1\n" % (str(inListenPort), targetQueue))
-
+    # Emit a sender scripts
+    for dmode in ["balanced", "closest", "multicast"]:
+        pathsndr = os.path.join(odir, ("sender-%s.sh" % dmode))
+        with open(pathsndr, 'w') as d:
+            d.write("#!/bin/bash\n")
+            d.write("\n")
+            d.write("# Environment for python/proton/n/stuff\n")
+            d.write("source ~/bin/dispatch-setup.sh\n")
+            d.write("\n")
+            d.write("/home/chug/git/qpid-proton/build/examples/cpp/simple_send -a amqp://127.0.0.1:%s/%s-%s $1\n" % (str(inListenPort), targetQueue, dmode))
+        chmodExec(pathsndr)
 
     # Emit a receiver script
-    pathrcvr = os.path.join(odir, "receiver.sh")
-    with open(pathrcvr, 'w') as d:
-        d.write("#!/bin/bash\n")
-        d.write("\n")
-        d.write("# Environment for python/proton/n/stuff\n")
-        d.write("source ~/bin/dispatch-setup.sh\n")
-        d.write("\n")
-        d.write("/home/chug/git/qpid-proton/build/examples/cpp/simple_recv -a amqp://127.0.0.1:%s/%s $1\n" % (str(outListenPort), targetQueue))
-
-    # Make the scripts executable
-    chmodExec(pathqdr)
-    chmodExec(pathsndr)
-    chmodExec(pathrcvr)
+    for dmode in ["balanced", "closest", "multicast"]:
+        pathrcvr = os.path.join(odir, ("receiver-%s.sh" % dmode))
+        with open(pathrcvr, 'w') as d:
+            d.write("#!/bin/bash\n")
+            d.write("\n")
+            d.write("# Environment for python/proton/n/stuff\n")
+            d.write("source ~/bin/dispatch-setup.sh\n")
+            d.write("\n")
+            d.write("/home/chug/git/qpid-proton/build/examples/cpp/simple_recv -a amqp://127.0.0.1:%s/%s-%s $1\n" % (str(outListenPort), targetQueue, dmode))
+        chmodExec(pathrcvr)
 
 def main(argv):
     try:
