@@ -50,12 +50,15 @@ def main_except(argv):
     #                opens connector to 21002
     # The third, C, opens port 21001 for B's interrouter connection
     # ...
-    # The last, N, opens port 2100x for the interrouter connection and 55672 for the receivers to drain
+    # The last, N, opens port 2100x for the interrouter connection and 5674 for the receivers to drain
+    # Apr17 - add listener for each router so intermediate in chain can deliver and forward at the same
+    #         time.
     #
-    #       0 A            1 B            ---   3 D
-    #       +------+       +-------+            +-------+
-    #    L: 5672         L: 21000            L:  21002
-    #           C: 21000        C: 21001             L: 55672
+    #       0 A              1 B              2 C  3 D
+    #       +------+         +-------+        +-------         +-------+
+    #    L: 5672         irL: 21000       irl: 21001        irL:  21002
+    #           C: 21000          C: 21001          C: 21002          L: 5674
+    #           L: 5700           L: 5701           L:5702            L: 5703
     #         addrs
     #
     # It's really convenient if all these ports are available when the scripts are started up, for sure.
@@ -74,6 +77,7 @@ def main_except(argv):
     # Constants chosen arbitrarily
     inListenPort = 5672
     outListenPort = 5674
+    inListenersBase = 5700
     firstInterrouter = 21000
     targetQueue = "q1"  # addresses are: q1-balanced, q1-closest, q1-multicast
 
@@ -94,6 +98,7 @@ def main_except(argv):
             d.write("router {\n")
             d.write("    mode: interior\n")
             d.write("    id: Router.%s\n" % rid)
+            d.write("    workerThreads: 8\n")
             d.write("}\n")
             d.write("\n")
             if ri == 0:
@@ -108,7 +113,7 @@ def main_except(argv):
                 for dmode in ["balanced", "closest", "multicast"]:
                     d.write("address {\n")
                     d.write("    prefix: %s-%s\n" % (targetQueue, dmode))
-                    d.write("    distribution: %s\n" % (dmode))
+                    d.write("    distribution: %s\n" % dmode)
                     d.write("}\n")
                     d.write("\n")
             if ri > 0:
@@ -144,6 +149,13 @@ def main_except(argv):
             d.write("    enable: info+\n")
             d.write("    output: %s\n" % os.path.join(odir, lfn))
             d.write("}\n")
+            # all router gets native listeners
+            d.write("listener {\n")
+            d.write("    host: 127.0.0.1\n")
+            d.write("    port: %s\n" % str(inListenersBase + ri))
+            d.write("    authenticatePeer: no\n")
+            d.write("    saslMechanisms: ANONYMOUS\n")
+            d.write("}\n")
 
     # Emit the qdr runner script
     pathqdr = os.path.join(odir, "run-qdrs.sh")
@@ -166,7 +178,7 @@ def main_except(argv):
             d.write("%s=$!\n" % pidname)
         d.write("\n")
 
-        # shutdown hint
+        # some hints
         d.write("echo  to shut down routers execute: kill %s\n" % " ".join(pids))
         d.write("echo To get perf data for router:\n")
         for ri in range(0, nRouters):
@@ -176,9 +188,12 @@ def main_except(argv):
         for ri in range(0, nRouters):
             rid = chr(ord('A') + ri)
             d.write("echo . %c: perf report -g --call-graph --stdio -i %c_perf.data --header '>' %c-perf-graph.txt\n" % (rid, rid, rid))
+        d.write("echo To gdb the router:\n")
+        d.write("echo .  gdb ${DEVROOT}/build/router/qdrouterd pid\n")
+
     chmodExec(pathqdr)
 
-    # Emit a sender scripts
+    # Emit a sender script
     for dmode in ["balanced", "closest", "multicast"]:
         pathsndr = os.path.join(odir, ("sender-%s.sh" % dmode))
         with open(pathsndr, 'w') as d:

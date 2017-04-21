@@ -1,0 +1,10 @@
+p message_copy_calls
+p message_copy_set_trace
+p message_copy_set_trace_was_mt
+p message_copy_set_trace_is_mt
+p message_copy_set_override
+p message_copy_set_override_was_mt
+p message_copy_set_override_is_mt
+p message_copy_set_annotation
+p message_copy_set_annotation_was_mt
+p message_copy_set_annotation_is_mt
