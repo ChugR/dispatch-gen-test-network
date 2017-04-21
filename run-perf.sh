@@ -7,6 +7,13 @@
 #
 # $1 is the dir to use for files
 
+# set -x
+
+if [ $# -eq 0 ]; then
+    echo "Usage: ./run-perf directoryName"
+    exit 1
+fi
+
 DIRECTORY=$1
 ROUTERPID=$(pidof qdrouterd)
 
@@ -39,7 +46,7 @@ killall --wait perf
 # General thread CPU usage at end
 top -Hbn1 -p $ROUTERPID > top-end.txt
 
-# Analyze data files into text
+# Generate call graph perf reports
 ps -L --pid $ROUTERPID -o tid= |\
     while read tid
     do
