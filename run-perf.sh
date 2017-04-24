@@ -10,7 +10,7 @@
 # set -x
 
 if [ $# -eq 0 ]; then
-    echo "Usage: ./run-perf directoryName"
+    echo "Usage: ./run-perf.sh directoryName"
     exit 1
 fi
 
@@ -27,7 +27,9 @@ mkdir $DIRECTORY
 pushd $DIRECTORY
 
 # General thread CPU usage at beginning
-top -Hbn1 -p $ROUTERPID > top-beginning.txt
+top -Hbn1 -p $ROUTERPID > at-begin-top.txt
+qdstat -l               > at-begin-qdstat-l.txt
+qdstat -n               > at-begin-qdstat-n.txt
 
 # Generate perf data files per thread
 ps -L --pid $ROUTERPID -o tid= |\
@@ -38,13 +40,15 @@ ps -L --pid $ROUTERPID -o tid= |\
     done
 
 #
-read -p "Press enter to continue"
+read -p "Perf is collecting data. Press Enter to stop collecting."
 
 #
 killall --wait perf
 
 # General thread CPU usage at end
-top -Hbn1 -p $ROUTERPID > top-end.txt
+top -Hbn1 -p $ROUTERPID > at-end-top.txt
+qdstat -l               > at-end-qdstat-l.txt
+qdstat -n               > at-end-qdstat-n.txt
 
 # Generate call graph perf reports
 ps -L --pid $ROUTERPID -o tid= |\
@@ -56,3 +60,5 @@ ps -L --pid $ROUTERPID -o tid= |\
 
 #
 popd
+
+exit 0
