@@ -29,7 +29,7 @@ pushd $DIRECTORY
 # General thread CPU usage at beginning
 top -Hbn1 -p $ROUTERPID > at-begin-top.txt
 qdstat -l               > at-begin-qdstat-l.txt
-qdstat -n               > at-begin-qdstat-n.txt
+qdstat -a               > at-begin-qdstat-a.txt
 
 # Generate perf data files per thread
 ps -L --pid $ROUTERPID -o tid= |\
@@ -48,7 +48,7 @@ killall --wait perf
 # General thread CPU usage at end
 top -Hbn1 -p $ROUTERPID > at-end-top.txt
 qdstat -l               > at-end-qdstat-l.txt
-qdstat -n               > at-end-qdstat-n.txt
+qdstat -a               > at-end-qdstat-a.txt
 
 # Generate call graph perf reports
 ps -L --pid $ROUTERPID -o tid= |\
