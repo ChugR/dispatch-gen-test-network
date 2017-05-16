@@ -1,8 +1,9 @@
 #!/bin/bash
 
-# Run perf on each thread of qdrouterd process
+# Run perf on each thread of a single qdrouterd process
 #
 # $1 is the dir to use for files
+# $2 is an optional pid for qdrouterd 
 #
 #  Perfs all run as subprocesses.
 #  Keeps running until you press Enter
@@ -20,19 +21,36 @@
 # set -x
 
 if [ $# -eq 0 ]; then
-    echo "Usage: ./run-perf.sh directoryName"
+    echo "Usage: ./run-perf.sh directoryName [routerPid]"
     exit 1
 fi
 
 DIRECTORY=$1
-ROUTERPID=$(pidof qdrouterd)
 
-# Get into fresh working folder
 if [ -d "$DIRECTORY" ]; then
     echo "Directory $DIRECTORY already exists. Sorry."
     exit 1
 fi
 
+if [ $# -ge 2 ]; then
+    # Run on this pid whether it's a qdrouterd or not
+    ROUTERPID=$2
+else
+    ROUTERPID=$(pidof qdrouterd)
+    PIDC=$(echo $ROUTERPID | wc -w)
+    if [ "0" -eq "$PIDC" ]; then
+        echo "No qdrouterd is running"
+        exit 1
+    else
+        if [ "1" -ne "$PIDC" ]; then
+            echo "More than one router is running."
+            echo "Select one by choosing a pid. Pids are: $ROUTERPID"
+            exit 1
+        fi
+    fi
+fi
+
+# Get into fresh working folder
 mkdir $DIRECTORY
 pushd $DIRECTORY
 
